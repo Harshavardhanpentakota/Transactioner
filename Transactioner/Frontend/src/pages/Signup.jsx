@@ -52,7 +52,7 @@ export const Signup = () => {
             <Button
               onClick={async () => {
                 const response = await axios.post(
-                  "https://localhost:3000/api/v1/user/signup",
+                  "http://localhost:3000/api/v1/user/signup",
                   {
                     username,
                     firstName,
@@ -62,6 +62,7 @@ export const Signup = () => {
                 );
                 localStorage.setItem("token", response.data.token);
                 navigate("/dashboard");
+                console.log(firstName + " " + lastName + " " + username);
               }}
               label={"Sign up"}
             />

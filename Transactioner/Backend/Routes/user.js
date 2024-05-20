@@ -4,13 +4,39 @@ const zod = require("zod");
 const { User, Account } = require("../db");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = require("../config");
-const authMiddleware = require("../middleware");
+const { authMiddleware } = require("../middleware");
 
 const userSchema = zod.object({
   username: zod.string(),
   password: zod.string(),
   firstName: zod.string(),
   lastName: zod.string(),
+});
+
+userRouter.get("/signin", authMiddleware, async (req, res) => {
+  const body = req.body;
+  const { success } = userSchema.safeParse(body);
+  if (!success) {
+    res.send(411).json({
+      msg: "invalid inputs",
+    });
+  }
+  const user = await User.findOne({ username: body.username });
+  if (user.password !== body.password) {
+    res.json({
+      msg: "incorrect password",
+    });
+  }
+  const token = jwt.sign(
+    {
+      userId: user._id,
+    },
+    JWT_SECRET
+  );
+  res.json({
+    msg: "User logged in!!",
+    token: token,
+  });
 });
 
 userRouter.post("/signup", async (req, res) => {
@@ -48,9 +74,9 @@ userRouter.post("/signup", async (req, res) => {
   });
 });
 
-userRouter.put("/update", async (req, res) => {
-  const parser = userSchema.safeParse(req.body);
-  if (!parser.success()) {
+userRouter.put("/update", authMiddleware, async (req, res) => {
+  const { success } = userSchema.safeParse(req.body);
+  if (!success) {
     res.status(411).json({
       msg: "Invalid inputs",
     });
@@ -79,8 +105,12 @@ userRouter.get("/bulk", async (req, res) => {
       },
     ],
   });
+  if (users.length === 0) {
+    res.json({});
+  }
   res.json({
-    user: users.map((user) => ({
+    users: users.map((user) => ({
+      _id: user._id,
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -97,11 +127,11 @@ userRouter.get("/balance", authMiddleware, async (req, res) => {
   });
 });
 
-userRouter.post("/transfer", authMiddleware, async (req, res) => {
+userRouter.post("/send", authMiddleware, async (req, res) => {
   const session = await mongoose.startSession();
 
   session.startTransaction();
-  const { amount, to } = req.body;
+  const { amount, to } = req.query;
 
   const account = await Account.findOne({ userId: req.userId }).session(
     session
@@ -129,12 +159,12 @@ userRouter.post("/transfer", authMiddleware, async (req, res) => {
   ).session(session);
   await Account.updateOne(
     { userId: to },
-    { $inc: { balance: balance + amount } }
+    { $inc: { balance: amount } }
   ).session(session);
 
   await session.commitTransaction();
   res.json({
-    msg: "Transfer Succesful",
+    msg: "Transfer Succesfull",
   });
 });
 

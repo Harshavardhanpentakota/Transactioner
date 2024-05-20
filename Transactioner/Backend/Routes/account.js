@@ -1,10 +1,10 @@
 const express = require("express");
-const router = express.Router();
+const accountRouter = express.Router();
 const { authMiddleware } = require("../middleware");
 const { Account } = require("../db");
 const { default: mongoose } = require("mongoose");
 
-router.get("/balance", authMiddleware, async (req, res) => {
+accountRouter.get("/balance", authMiddleware, async (req, res) => {
   const account = await Account.findOne({
     userId: req.userId,
   });
@@ -13,7 +13,7 @@ router.get("/balance", authMiddleware, async (req, res) => {
   });
 });
 
-router.post("/transfer", authMiddleware, async (req, res) => {
+accountRouter.post("/transfer", authMiddleware, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   const { amount, to } = req.body;
@@ -51,4 +51,4 @@ router.post("/transfer", authMiddleware, async (req, res) => {
   });
 });
 
-module.exports = { accountRouter: router };
+module.exports = { accountRouter };
